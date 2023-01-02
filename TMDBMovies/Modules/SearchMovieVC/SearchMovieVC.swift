@@ -66,7 +66,7 @@ extension SearchMovieVC: UICollectionViewDelegate, UICollectionViewDataSource, U
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MovieListCVCell.reuseIdentifire, for: indexPath) as? MovieListCVCell else {
-            fatalError("MovieListCVCell Not found")
+            fatalError("MovieListCVCell Not found in project")
         }
         cell.configCell(cellVM: self.viewModel.getCellVM(at: indexPath.row))
         return cell
