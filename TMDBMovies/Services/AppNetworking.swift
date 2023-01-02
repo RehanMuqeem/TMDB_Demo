@@ -1,0 +1,370 @@
+//
+//  AppNetworking.swift
+//  vGuard
+//
+//  Created by Admin on 08/12/21.
+//
+
+import Foundation
+import Alamofire
+import Photos
+
+typealias JSONDictionary = [String : Any]
+typealias JSONDictionaryArray = [JSONDictionary]
+typealias SuccessResponse = (_ json : JSON) -> ()
+typealias FailureResponse = (NSError) -> (Void)
+typealias ResponseMessage = (_ message : String) -> ()
+typealias UserControllerSuccess = (_ user : UserModel) -> ()
+typealias DownloadData = (_ data : Data) -> ()
+typealias UploadFileParameter = (fileName: String, key: String, data: Data, mimeType: String)
+
+extension Notification.Name {
+    static let NotConnectedToInternet = Notification.Name("Please check your Internet or Wi-Fi connection")
+}
+
+enum AppNetworking {
+    
+    static var timeOutInterval = TimeInterval(30)
+    static let username = "vguard"
+    static let password = "vguard@123"
+    static let Api_Key = "1234"
+    
+    static func isConnected() ->Bool {
+        return NetworkReachabilityManager()!.isReachable
+    }
+    
+    //Set Header
+    static func getHeaders() -> HTTPHeaders {
+        
+        let credentialData = "\(username):\(password)".data(using: .utf8)
+        guard let cred = credentialData else { return ["" : ""] }
+        let base64Credentials = cred.base64EncodedData(options: [])
+        guard let base64Date = Data(base64Encoded: base64Credentials) else { return ["" : ""] }
+
+        var header : HTTPHeaders = ["Authorization": "Basic \(base64Date.base64EncodedString())",
+                                    "api_key" : Api_Key,
+                                    "timezone" : AppKeys.timeZone,
+                                    ApiKey.platform: AppKeys.platform,
+                                    ApiKey.language :  "en"]
+        
+        if !UserModel.main.token.isEmpty  {
+            header[ApiKey.Authorization] = "Bearer \(UserModel.main.token)"
+            header["timezone"] = AppKeys.timeZone
+            header[ApiKey.platform] =  AppKeys.platform
+        }
+        return header
+    }
+    
+    static func POST(endPoint : String,
+                     parameters : JSONDictionary = [:],
+                     headers : HTTPHeaders = [:],
+                     loader : Bool = true,
+                     success : @escaping (JSON) -> Void,
+                     failure : @escaping (NSError) -> Void) {
+        
+        
+        request(URLString: endPoint, httpMethod: .post, parameters: parameters, headers: headers, loader: loader, success: success, failure: failure)
+    }
+    
+    static func POSTWithFiles(endPoint : String,
+                              parameters : [String : Any] = [:],
+                              files : [UploadFileParameter] = [],
+                              headers : HTTPHeaders = [:],
+                              loader : Bool = true,
+                              success : @escaping (JSON) -> Void,
+                              failure : @escaping (NSError) -> Void) {
+        
+        upload(URLString: endPoint, httpMethod: .post, parameters: parameters, files: files, headers: headers, loader: loader, success: success, failure: failure)
+    }
+    
+    static func POSTWithRawJSON(endPoint : String,
+                                parameters : JSONDictionary = [:],
+                                headers : HTTPHeaders = [:],
+                                loader : Bool = true,
+                                success : @escaping (JSON) -> Void,
+                                failure : @escaping (NSError) -> Void) {
+        
+        
+        request(URLString: endPoint, httpMethod: .post, parameters: parameters,encoding: JSONEncoding.default, headers: headers, loader: loader, success: success, failure: failure)
+    }
+    
+    
+    static func GET(endPoint : String,
+                    parameters : [String : Any] = [:],
+                    headers : HTTPHeaders = [:],
+                    loader : Bool = true,
+                    success : @escaping (JSON) -> Void,
+                    failure : @escaping (NSError) -> Void) {
+        
+        request(URLString: endPoint, httpMethod: .get, parameters: parameters, encoding: URLEncoding.queryString, headers: headers, loader: loader, success: success, failure: failure)
+    }
+    
+    static func PUT(endPoint : String,
+                    parameters : JSONDictionary = [:],
+                    headers : HTTPHeaders = [:],
+                    loader : Bool = true,
+                    success : @escaping (JSON) -> Void,
+                    failure : @escaping (NSError) -> Void) {
+        
+        request(URLString: endPoint, httpMethod: .put, parameters: parameters, encoding: URLEncoding.httpBody, headers: headers, loader: loader, success: success, failure: failure)
+    }
+    
+    
+    static func PUTWithRawJSON(endPoint : String,
+                               parameters : JSONDictionary = [:],
+                               headers : HTTPHeaders = [:],
+                               loader : Bool = true,
+                               success : @escaping (JSON) -> Void,
+                               failure : @escaping (NSError) -> Void) {
+        
+        
+        request(URLString: endPoint, httpMethod: .put, parameters: parameters,encoding: JSONEncoding.default, headers: headers, loader: loader, success: success, failure: failure)
+    }
+    
+    static func PATCH(endPoint : String,
+                      parameters : JSONDictionary = [:],
+                      encoding: URLEncoding = URLEncoding.httpBody,
+                      headers : HTTPHeaders = [:],
+                      loader : Bool = true,
+                      success : @escaping SuccessResponse,
+                      failure : @escaping FailureResponse) {
+        
+        request(URLString: endPoint, httpMethod: .patch, parameters: parameters, encoding: encoding, headers: headers, loader: loader, success: success, failure: failure)
+    }
+    
+    static func DELETE(endPoint : String,
+                       parameters : JSONDictionary = [:],
+                       headers : HTTPHeaders = [:],
+                       loader : Bool = true,
+                       success : @escaping (JSON) -> Void,
+                       failure : @escaping (NSError) -> Void) {
+        
+        request(URLString: endPoint, httpMethod: .delete, parameters: parameters, headers: headers, loader: loader, success: success, failure: failure)
+    }
+    
+    static func DOWNLOAD(endPoint : String,
+                         parameters : JSONDictionary = [:],
+                         headers : HTTPHeaders = [:],
+                         mediaType : String,
+                         loader : Bool = true,
+                         success : @escaping (Bool) -> Void,
+                         failure : @escaping (NSError) -> Void) {
+        
+        download(URLString: endPoint, httpMethod: .get, parameters: parameters, headers: headers, mediaType: mediaType, loader: loader, success: success, failure: failure)
+    }
+    
+    private static func download(URLString : String,
+                                 httpMethod : HTTPMethod,
+                                 parameters : JSONDictionary = [:],
+                                 encoding: URLEncoding = URLEncoding.default,
+                                 headers : HTTPHeaders = [:],
+                                 mediaType : String,
+                                 loader : Bool = true,
+                                 success : @escaping (Bool) -> Void,
+                                 failure : @escaping (NSError) -> Void) {
+        
+        
+        var fileURL = URL(string: "")
+        
+        let destination: DownloadRequest.DownloadFileDestination = { _, _  in
+            
+            let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            
+            fileURL = documentsURL.appendingPathComponent(mediaType.replace(string: "/", withString: "."))
+            return (fileURL!, [.removePreviousFile, .createIntermediateDirectories])
+            
+        }
+        
+        if loader { CommonFunctions.shared.showActivityLoader() }
+        
+        Alamofire.download(URLString, method: httpMethod, parameters: parameters, encoding: encoding, headers: headers, to: destination).response { (response) in
+            
+            if loader { CommonFunctions.shared.hideActivityLoader() }
+            
+            if response.error != nil {
+                printDebug("===================== FAILURE =======================")
+                let e = response.error!
+                printDebug(e.localizedDescription)
+                
+                if (e as NSError).code == NSURLErrorNotConnectedToInternet {
+                    NotificationCenter.default.post(name: .NotConnectedToInternet, object: nil)
+                }
+                failure(e as NSError)
+                
+            } else {
+                printDebug("===================== RESPONSE =======================")
+                guard response.error == nil else { return }
+                
+                switch mediaType {
+                    
+                case "video/mp4":  CustomPhotoAlbum.shared.saveVideo(videoFileUrl: fileURL!)
+                    
+                case "application/pdf":
+                    break
+                    //insantiate webViewVC
+                    //webView.loadRequest(URLRequest(url: fileURL!))
+                    
+                default: CustomPhotoAlbum.shared.saveImage(imageFileUrl: fileURL!)
+                    
+                }
+                success(true)
+            }
+        }
+    }
+    
+    private static func request(URLString : String,
+                                httpMethod : HTTPMethod,
+                                parameters : JSONDictionary = [:],
+                                encoding: ParameterEncoding = URLEncoding.httpBody,
+                                headers : HTTPHeaders = [:],
+                                loader : Bool = true,
+                                success : @escaping (JSON) -> Void,
+                                failure : @escaping (NSError) -> Void) {
+        
+        if loader { CommonFunctions.shared.showActivityLoader() }
+        //   print(parameters)
+        
+        var header_auth = self.getHeaders()
+        if httpMethod == .put{
+            header_auth["content-type"] = "application/json"
+            //"application/x-www-form-urlencoded"
+        }
+        makeRequest(URLString: URLString, httpMethod: httpMethod, parameters: parameters, encoding: encoding, headers: header_auth, loader: loader, success: { (json) in
+            // print(json)
+            let code = json[ApiKey.code].intValue
+            let message = json[ApiKey.message].stringValue
+            if code == 401 {
+                CommonFunctions.shared.showToastWithMessage(message)
+                AppRouter.shared.goToLogin()
+                //"Your session is expired. Please login again.")
+            }else{
+                if loader { CommonFunctions.shared.hideActivityLoader() }
+                success(json)
+            }
+        }, failure: failure)
+    }
+    
+    private static func makeRequest(URLString : String,
+                                    httpMethod : HTTPMethod,
+                                    parameters : JSONDictionary = [:],
+                                    encoding: ParameterEncoding = URLEncoding.queryString,
+                                    headers : HTTPHeaders = [:],
+                                    loader : Bool = true,
+                                    success : @escaping (JSON) -> Void,
+                                    failure : @escaping (NSError) -> Void) {
+        
+        Alamofire.request(URLString, method: httpMethod, parameters: parameters, encoding: encoding, headers: self.getHeaders()).responseJSON { (response:DataResponse<Any>) in
+            
+            if loader { CommonFunctions.shared.hideActivityLoader() }
+            
+            printDebug("===================== METHOD =========================")
+            printDebug(httpMethod)
+            printDebug("===================== ENCODING =======================")
+            printDebug(encoding)
+            printDebug("===================== URL STRING =====================")
+            printDebug(URLString)
+            printDebug("===================== HEADERS ========================")
+            printDebug(headers)
+            printDebug("===================== PARAMETERS =====================")
+            printDebug(parameters.description)
+            
+            switch(response.result) {
+            case .success(let value):
+                printDebug("===================== RESPONSE =======================")
+                printDebug(JSON(value))
+                
+                let json = JSON(value)
+                success(json)
+                
+            case .failure(let e):
+                printDebug("===================== FAILURE =======================")
+                if loader { CommonFunctions.shared.hideActivityLoader() }
+                let error = NSError(localizedDescription: e.localizedDescription)
+                printDebug(error)
+                if (e as NSError).code == NSURLErrorNotConnectedToInternet {
+                    
+                    NotificationCenter.default.post(name: .NotConnectedToInternet, object: nil)
+                    
+                    CommonFunctions.shared.showToastWithMessage(LocalizedString.pleaseCheckInternetConnection.localized)
+                    failure(error)
+                } else {
+                    failure(error)
+                }
+            }
+        }
+    }
+    
+    
+    private static func upload(URLString : String,
+                               httpMethod : HTTPMethod,
+                               parameters : JSONDictionary = [:],
+                               files : [UploadFileParameter] = [],
+                               headers : HTTPHeaders = [:],
+                               loader : Bool = true,
+                               success : @escaping (JSON) -> Void,
+                               failure : @escaping (NSError) -> Void) {
+        
+        guard let url = try? URLRequest(url: URLString, method: httpMethod, headers: headers) else { return }
+        
+        if loader { CommonFunctions.shared.showActivityLoader() }
+        
+        Alamofire.upload(multipartFormData: { (multipartFormData) in
+            
+            files.forEach({ (fileParamObject) in
+                
+                multipartFormData.append(fileParamObject.data, withName: fileParamObject.key, fileName: fileParamObject.fileName, mimeType: fileParamObject.mimeType)
+            })
+            
+            parameters.forEach({ (paramObject) in
+                
+                if let data = (paramObject.value as AnyObject).data(using : String.Encoding.utf8.rawValue) {
+                    multipartFormData.append(data, withName: paramObject.key)
+                }
+            })
+            
+        }, with: url, encodingCompletion: { encodingResult in
+            
+            switch encodingResult{
+            case .success(request: let upload, streamingFromDisk: _, streamFileURL: _):
+                upload.responseJSON(completionHandler: { (response:DataResponse<Any>) in
+                    
+                    if loader { CommonFunctions.shared.hideActivityLoader() }
+                    
+                    printDebug("===================== METHOD =========================")
+                    printDebug(httpMethod)
+                    printDebug("===================== URL STRING =====================")
+                    printDebug(URLString)
+                    printDebug("===================== HEADERS ========================")
+                    printDebug(headers)
+                    printDebug("===================== PARAMETERS =====================")
+                    printDebug(parameters)
+                    
+                    switch response.result{
+                    case .success(let value):
+                        printDebug("===================== RESPONSE =======================")
+                        printDebug(JSON(value))
+                        
+                        success(JSON(value))
+                    case .failure(let e):
+                        printDebug("===================== FAILURE =======================")
+                        printDebug(e.localizedDescription)
+                        
+                        if (e as NSError).code == NSURLErrorNotConnectedToInternet {
+                            NotificationCenter.default.post(name: .NotConnectedToInternet, object: nil)
+                        }
+                        failure(e as NSError)
+                    }
+                })
+                
+            case .failure(let e):
+                
+                if loader { CommonFunctions.shared.hideActivityLoader() }
+                
+                if (e as NSError).code == NSURLErrorNotConnectedToInternet {
+                    NotificationCenter.default.post(name: .NotConnectedToInternet, object: nil)
+                }
+                failure(e as NSError)
+            }
+        })
+    }
+}
