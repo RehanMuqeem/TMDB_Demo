@@ -8,22 +8,38 @@
 import UIKit
 
 class BaseVC: UIViewController {
-
+    
+//  MARK: - View Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // Do any additional setup after loading the view.
+        self.initialSetup()
+        self.bindDelegates()
+        self.setupColors()
+        self.setupTexts()
+        self.setupFonts()
+        self.hideKeyboardWhenTappedAround()
     }
     
+//  MARK: - Methods to inherit from Parent Class
+    func initialSetup() { }
+    func bindDelegates() { }
+    func setupColors() { }
+    func setupTexts() { }
+    func setupFonts() { }
+    
+}
 
-    /*
-    // MARK: - Navigation
 
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
+extension BaseVC {
+    
+    func hideKeyboardWhenTappedAround() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(self.dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        view.addGestureRecognizer(tap)
     }
-    */
-
+    
+    @objc func dismissKeyboard() {
+        self.view.endEditing(true)
+    }
+    
 }
