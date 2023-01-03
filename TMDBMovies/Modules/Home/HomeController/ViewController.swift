@@ -33,7 +33,6 @@ class ViewController: BaseVC {
 //  MARK: - View Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.hideKeyboardWhenTappedAround()
     }
     
     override func initialSetup() {

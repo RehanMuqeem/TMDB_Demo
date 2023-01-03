@@ -7,7 +7,7 @@
 
 import UIKit
 
-/// ``Usage:``      `This controller is used to display the local and remote of the selected movie.`
+/// ``Usage:``      `This controller is used to display the local and remote of the searched movie.`
 /// ``How to Reach:``       `Launch the app -> at Home screen tap on search button in top right corner.
 /// ``UI Components:``      `Used UISearchBar, UICollectionView and custom Navigation bar with title and back button.`
 
@@ -42,6 +42,7 @@ class SearchMovieVC: BaseVC {
         layout.sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 12, right: 0)
         layout.minimumInteritemSpacing = 12
         layout.minimumLineSpacing = 12
+        self.collectionView.keyboardDismissMode = .onDrag
         collectionView!.collectionViewLayout = layout
     }
     

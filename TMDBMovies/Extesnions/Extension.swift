@@ -7,6 +7,7 @@
 
 import UIKit
 
+//MARK: - Extension String
 extension String {
     
     func stringByRemovingEmoji() -> String {
@@ -24,7 +25,7 @@ extension String {
         return textTest.evaluate(with: self)
     }
     
-    func toDateText(inputDateFormat: Date.DateFormat = .yyyy_MM_dd, outputDateFormat: Date.DateFormat = .ddMMMyyyy, timeZone: TimeZone = TimeZone.current) -> String{
+    func toDateText(inputDateFormat: Date.DateFormat = .yyyy_MM_dd, outputDateFormat: Date.DateFormat = .ddMMMyyyy, timeZone: TimeZone = TimeZone.current) -> String {
         if let date = self.toDate(dateFormat: inputDateFormat.rawValue, timeZone: timeZone) {
             return date.toString(dateFormat: outputDateFormat.rawValue, timeZone: timeZone)
         } else {
@@ -33,7 +34,7 @@ extension String {
     }
     
     ///Converts the string into 'Date' if possible, based on the given date format and timezone. otherwise returns nil
-    func toDate(dateFormat: String, timeZone: TimeZone = TimeZone.current) ->Date? {
+    func toDate(dateFormat: String, timeZone: TimeZone = TimeZone.current) -> Date? {
         let frmtr = DateFormatter()
         frmtr.locale = Locale(identifier: "en_US_UNIX")
         frmtr.dateFormat = dateFormat
@@ -50,12 +51,12 @@ extension String {
     
 }
 
-
+//MARK: - Extension Date
 extension Date {
     
     enum DateFormat : String {
         case yyyy_MM_dd = "yyyy-MM-dd"
-        case ddMMMyyyy = "dd MMM, yyyy"
+        case ddMMMyyyy = "dd MMM yyyy"
     }
     
     ///Converts a given Date into String based on the date format and timezone provided
@@ -77,7 +78,7 @@ extension Date {
     
 }
 
-
+//MARK: - Extension Int
 extension Int {
     
     var minutesToHoursAndMinutes: String {
@@ -86,6 +87,7 @@ extension Int {
     
 }
 
+//MARK: - Extension Double
 extension Double {
     /// Rounds the double to decimal places value
 //    func rounded(toPlaces places:Int) -> Double {
@@ -101,6 +103,7 @@ extension Double {
     
 }
 
+//MARK: - Extension Character
 extension Character {
     
     func isContainsEmoji() -> Bool {
@@ -135,7 +138,7 @@ extension Character {
     
 }
 
-
+//MARK: - Extension UIView
 extension UIView {
     
     func roundCorners(_ corners: UIRectCorner, radius: CGFloat) {
@@ -183,6 +186,7 @@ extension UIView {
     
 }
 
+//MARK: - Extension UIScreen
 extension UIScreen {
     
     static var height: CGFloat {UIScreen.main.bounds.height}
@@ -227,6 +231,7 @@ struct AppShadowProperties {
     
 }
 
+//MARK: - Extension UICollectionView
 extension UICollectionView {
 
     func setEmptyMessage(_ message: String) {
